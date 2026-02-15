@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Memory App</title>
+<title>Memory App 💗</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Mali:wght@300;400;500&display=swap" rel="stylesheet">
 
@@ -70,13 +70,29 @@ header{
 }
 
 .month{
-    border:none;
     border-radius:15px;
     background:#ff69b4;
     color:white;
     font-weight:bold;
     overflow:hidden;
     cursor:pointer;
+}
+
+.month img{
+    width:100%;
+    height:70px;
+    object-fit:cover;
+}
+
+.cover-text{
+    position:absolute;
+    bottom:6px;
+    left:0;
+    right:0;
+    text-align:center;
+    color:white;
+    font-size:12px;
+    font-weight:bold;
 }
 
 .no-cover{
@@ -108,22 +124,26 @@ header{
     cursor:pointer;
 }
 
+.selected{
+    border:3px solid red;
+}
+
 .controls{
     text-align:center;
     padding:10px;
 }
 
-.back{
-    text-align:center;
-    padding:10px;
-}
-
-.back button{
+.controls button{
+    margin:5px;
+    padding:6px 10px;
     border:none;
-    padding:8px 12px;
-    border-radius:10px;
+    border-radius:8px;
     background:#ff69b4;
     color:white;
+}
+
+.delete-btn{
+    background:#ff4d6d !important;
 }
 
 /* popup */
@@ -142,7 +162,6 @@ header{
     border-radius:20px;
 }
 
-/* hearts */
 @keyframes floatHeart{
     from{ transform:translateY(0); opacity:1; }
     to{ transform:translateY(-100vh); opacity:0; }
@@ -167,13 +186,17 @@ header{
 
 <div id="galleryPage" style="display:none;">
     <div class="controls">
-        <div>เพิ่มรูป / วิดีโอ</div>
-        <input type="file" id="upload" accept="image/*,video/*">
+        <input type="file" id="upload" accept="image/*,video/*"><br>
+        <button onclick="toggleSelect()">เลือก</button>
+        <button class="delete-btn" onclick="deleteSelected()">ลบ</button>
+
+        <div style="margin-top:10px;">ตั้งหน้าปก</div>
+        <input type="file" id="coverUpload" accept="image/*">
     </div>
 
     <div class="gallery" id="gallery"></div>
 
-    <div class="back">
+    <div style="text-align:center;padding:10px;">
         <button onclick="backToMonths()">⬅ กลับ</button>
     </div>
 </div>
@@ -198,25 +221,30 @@ const monthPage = document.getElementById("monthPage");
 const galleryPage = document.getElementById("galleryPage");
 const gallery = document.getElementById("gallery");
 const upload = document.getElementById("upload");
+const coverUpload = document.getElementById("coverUpload");
 const headerTitle = document.getElementById("headerTitle");
 
 let currentMonth = null;
 let memory = {};
 
+let selectMode = false;
+let selected = new Set();
+
+
+// ================= เดือน =================
 function renderMonths(){
     monthPage.innerHTML = "";
     monthNames.forEach((name,i)=>{
         const btn = document.createElement("div");
         btn.className = "month";
-        btn.innerHTML = `
-            <div class="no-cover">📁</div>
-            <span>${name}</span>
-        `;
         btn.onclick = ()=> openMonth(i);
+        btn.innerHTML = `<div class="no-cover">📁</div><span>${name}</span>`;
         monthPage.appendChild(btn);
     });
 }
 
+
+// ================= รหัสผ่าน =================
 window.checkPassword = function(){
     const input = document.getElementById("passInput").value;
     if(input === PASSWORD){
@@ -228,21 +256,15 @@ window.checkPassword = function(){
     }
 }
 
+
+// ================= เปิดเดือน =================
 async function openMonth(index){
     currentMonth = index;
     headerTitle.innerText = monthNames[index];
     monthPage.style.display="none";
     galleryPage.style.display="block";
 
-    const res = await fetch("/files/" + index);
-    const files = await res.json();
-
-    memory[index] = files.map(url => ({
-        type: url.match(/\.mp4|\.webm|\.mov/) ? "video" : "image",
-        src: url
-    }));
-
-    showImages();
+    await loadImages();
 }
 
 window.backToMonths = function(){
@@ -251,6 +273,22 @@ window.backToMonths = function(){
     monthPage.style.display="grid";
 }
 
+
+// ================= โหลดจาก SERVER =================
+async function loadImages(){
+    const res = await fetch("/files/" + currentMonth);
+    const files = await res.json();
+
+    memory[currentMonth] = files.map(url => ({
+        type: url.match(/\.mp4|\.webm|\.mov/) ? "video" : "image",
+        src: url
+    }));
+
+    showImages();
+}
+
+
+// ================= upload =================
 if(upload){
 upload.addEventListener("change", async (e)=>{
     const file = e.target.files[0];
@@ -259,29 +297,71 @@ upload.addEventListener("change", async (e)=>{
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch("/upload/" + currentMonth, {
-        method: "POST",
-        body: formData
+    await fetch("/upload/" + currentMonth, {
+        method:"POST",
+        body:formData
     });
 
-    if(!res.ok){
-        alert("อัปโหลดไม่สำเร็จ");
-        return;
-    }
-
-    const data = await res.json();
-
-    if(!memory[currentMonth]) memory[currentMonth] = [];
-
-    memory[currentMonth].unshift({
-        type: file.type.startsWith("video") ? "video" : "image",
-        src: data.url
-    });
-
-    showImages();
+    await loadImages();
 });
 }
 
+
+// ================= เลือก =================
+window.toggleSelect = function(){
+    selectMode = !selectMode;
+    selected.clear();
+    showImages();
+}
+
+
+// ================= ลบ =================
+window.deleteSelected = async function(){
+    if(selected.size === 0) return alert("ยังไม่ได้เลือกรูป");
+
+    await fetch("/delete", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({
+            month: currentMonth,
+            urls: [...selected]
+        })
+    });
+
+    selectMode = false;
+    selected.clear();
+    await loadImages();
+}
+
+
+// ================= ตั้งหน้าปก =================
+if(coverUpload){
+coverUpload.addEventListener("change", async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const up = await fetch("/upload/cover_" + currentMonth, {
+        method:"POST",
+        body:formData
+    });
+
+    const data = await up.json();
+
+    await fetch("/cover/" + currentMonth, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ url: data.url })
+    });
+
+    alert("ตั้งหน้าปกแล้ว 💗");
+});
+}
+
+
+// ================= แสดงรูป =================
 function showImages(){
     gallery.innerHTML = "";
     if(!memory[currentMonth]) return;
@@ -290,17 +370,32 @@ function showImages(){
         let el;
         if(item.type === "video"){
             el = document.createElement("video");
-            el.src = item.src;
         }else{
             el = document.createElement("img");
-            el.src = item.src;
         }
 
-        el.onclick = ()=> openPopup(item);
+        el.src = item.src;
+
+        if(selectMode){
+            el.onclick = ()=>{
+                if(selected.has(item.src)){
+                    selected.delete(item.src);
+                    el.classList.remove("selected");
+                }else{
+                    selected.add(item.src);
+                    el.classList.add("selected");
+                }
+            };
+        }else{
+            el.onclick = ()=> openPopup(item);
+        }
+
         gallery.appendChild(el);
     });
 }
 
+
+// ================= popup =================
 function openPopup(item){
     const box = document.getElementById("popup");
     const content = document.getElementById("popupContent");
@@ -309,14 +404,13 @@ function openPopup(item){
     let el;
     if(item.type === "video"){
         el = document.createElement("video");
-        el.src = item.src;
         el.controls = true;
         el.autoplay = true;
     }else{
         el = document.createElement("img");
-        el.src = item.src;
     }
 
+    el.src = item.src;
     content.appendChild(el);
     box.style.display="flex";
 }
@@ -326,9 +420,9 @@ window.closePopup = function(){
 }
 
 });
-</script>
 
-<script>
+
+// ================= หัวใจลอย =================
 setInterval(()=>{
     const heart = document.createElement("div");
     heart.innerHTML = "💗";
@@ -339,9 +433,9 @@ setInterval(()=>{
     heart.style.opacity = Math.random();
     heart.style.animation = "floatHeart 6s linear";
     document.body.appendChild(heart);
-
     setTimeout(()=> heart.remove(),6000);
 }, 400);
+
 </script>
 
 </body>
