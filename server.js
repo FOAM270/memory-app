@@ -6,13 +6,18 @@ const fs = require("fs");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ให้เรียกเว็บจาก public
+// ให้เว็บเรียกไฟล์ใน public
 app.use(express.static("public"));
 
-// ให้เรียกรูป
+// ให้เข้าถึง uploads
 app.use("/uploads", express.static("uploads"));
 
-// ถ้าไม่มีโฟลเดอร์ uploads ให้สร้าง
+// เข้าเว็บหลัก → เปิด index.html
+app.get("/", (req, res) => {
+  res.sendFile(__dirname + "/public/index.html");
+});
+
+// ถ้าไม่มี uploads ให้สร้าง
 if (!fs.existsSync("uploads")) {
   fs.mkdirSync("uploads");
 }
@@ -32,22 +37,16 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-// อัปโหลด
+// upload
 app.post("/upload/:month", upload.single("file"), (req, res) => {
-  res.json({
-    url: `/uploads/${req.params.month}/${req.file.filename}`,
-  });
+  res.json({ url: `/uploads/${req.params.month}/${req.file.filename}` });
 });
 
-// ขอรายการไฟล์
+// list files
 app.get("/files/:month", (req, res) => {
   const dir = `uploads/${req.params.month}`;
   if (!fs.existsSync(dir)) return res.json([]);
-
-  const files = fs.readdirSync(dir).map(file =>
-    `/uploads/${req.params.month}/${file}`
-  );
-
+  const files = fs.readdirSync(dir).map(f => `/uploads/${req.params.month}/${f}`);
   res.json(files);
 });
 
