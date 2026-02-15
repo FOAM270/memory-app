@@ -1,3 +1,136 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memory App</title>
+
+<style>
+body{
+  margin:0;
+  font-family:sans-serif;
+  background:#f5f5f5;
+}
+
+h2{
+  margin:10px;
+}
+
+#monthPage{
+  display:grid;
+  grid-template-columns: repeat(auto-fill,minmax(120px,1fr));
+  gap:10px;
+  padding:10px;
+}
+
+.month{
+  background:white;
+  border-radius:12px;
+  padding:10px;
+  text-align:center;
+  cursor:pointer;
+  box-shadow:0 2px 5px rgba(0,0,0,0.1);
+}
+
+.cover-wrap{
+  position:relative;
+}
+
+.cover-wrap img{
+  width:100%;
+  height:90px;
+  object-fit:cover;
+  border-radius:10px;
+}
+
+.cover-text{
+  position:absolute;
+  bottom:5px;
+  left:5px;
+  right:5px;
+  color:white;
+  background:rgba(0,0,0,0.4);
+  border-radius:5px;
+  font-size:12px;
+}
+
+.no-cover{
+  height:90px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:30px;
+  background:#eee;
+  border-radius:10px;
+}
+
+#gallery{
+  display:grid;
+  grid-template-columns: repeat(auto-fill,minmax(100px,1fr));
+  gap:10px;
+  padding:10px;
+}
+
+.item-wrap img,
+.item-wrap video{
+  width:100%;
+  border-radius:10px;
+  cursor:pointer;
+}
+
+#popup{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.8);
+  display:none;
+  align-items:center;
+  justify-content:center;
+}
+
+#popup img,
+#popup video{
+  max-width:90%;
+  max-height:90%;
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="loginPage" style="padding:20px;">
+  <h2>ใส่รหัสผ่าน</h2>
+  <input id="passInput" type="password">
+  <button onclick="checkPassword()">เข้าใช้งาน</button>
+</div>
+
+<!-- APP -->
+<div id="appPage" style="display:none;">
+  <h2 id="headerTitle">เลือกเดือน</h2>
+
+  <!-- หน้าเลือกเดือน -->
+  <div id="monthPage"></div>
+
+  <!-- หน้าแกลเลอรี่ -->
+  <div id="galleryPage" style="display:none;">
+    <button onclick="backToMonths()">⬅ กลับ</button>
+    <br><br>
+
+    <input type="file" id="upload">
+    <input type="file" id="coverUpload">
+    <input type="text" id="coverTextInput" placeholder="ข้อความหน้าปก">
+    <button onclick="deleteCover()">ลบหน้าปก</button>
+
+    <div id="gallery"></div>
+  </div>
+</div>
+
+<!-- POPUP -->
+<div id="popup" onclick="closePopup()">
+  <div id="popupContent"></div>
+</div>
+
+<!-- JAVASCRIPT -->
 <script>
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -17,15 +150,13 @@ const coverTextInput = document.getElementById("coverTextInput");
 const headerTitle = document.getElementById("headerTitle");
 
 let currentMonth = null;
-let selectMode = false;
-let selectedItems = new Set();
 
 let memory = {};
 let covers = JSON.parse(localStorage.getItem("covers") || "{}");
 let coverTexts = JSON.parse(localStorage.getItem("coverTexts") || "{}");
 
 
-// ================== เดือน ==================
+// ================= เดือน =================
 function renderMonths(){
     monthPage.innerHTML = "";
     monthNames.forEach((name,i)=>{
@@ -53,7 +184,7 @@ function renderMonths(){
 }
 
 
-// ================== รหัสผ่าน ==================
+// ================= รหัสผ่าน =================
 window.checkPassword = function(){
     const input = document.getElementById("passInput").value;
     if(input === PASSWORD){
@@ -66,7 +197,7 @@ window.checkPassword = function(){
 }
 
 
-// ================== เปิดเดือน ==================
+// ================= เปิดเดือน =================
 async function openMonth(index){
     currentMonth = index;
     headerTitle.innerText = monthNames[index];
@@ -87,7 +218,7 @@ window.backToMonths = function(){
 }
 
 
-// ================== โหลดจาก SERVER ==================
+// ================= โหลดจาก server =================
 async function loadFromServer(month){
     const res = await fetch("/files/" + month);
     const files = await res.json();
@@ -99,7 +230,7 @@ async function loadFromServer(month){
 }
 
 
-// ================== อัปโหลด ==================
+// ================= upload =================
 if(upload){
 upload.addEventListener("change", async (e)=>{
     const file = e.target.files[0];
@@ -126,7 +257,7 @@ upload.addEventListener("change", async (e)=>{
 }
 
 
-// ================== หน้าปก ==================
+// ================= หน้าปก =================
 if(coverUpload){
 coverUpload.addEventListener("change", async (e)=>{
     const file = e.target.files[0];
@@ -166,7 +297,7 @@ window.deleteCover = function(){
 }
 
 
-// ================== แสดงรูป ==================
+// ================= แสดงรูป =================
 function showImages(){
     gallery.innerHTML = "";
     if(!memory[currentMonth]) return;
@@ -192,7 +323,7 @@ function showImages(){
 }
 
 
-// ================== popup ==================
+// ================= popup =================
 function openPopup(item){
     const box = document.getElementById("popup");
     const content = document.getElementById("popupContent");
@@ -219,3 +350,6 @@ window.closePopup = function(){
 
 });
 </script>
+
+</body>
+</html>
