@@ -4,12 +4,12 @@ const path = require("path");
 const fs = require("fs");
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-// ให้เว็บเรียกไฟล์ใน public ได้
+// ให้เรียกเว็บจาก public
 app.use(express.static("public"));
 
-// ให้เข้าถึงรูปที่อัปโหลด
+// ให้เรียกรูป
 app.use("/uploads", express.static("uploads"));
 
 // ถ้าไม่มีโฟลเดอร์ uploads ให้สร้าง
@@ -34,17 +34,23 @@ const upload = multer({ storage });
 
 // อัปโหลด
 app.post("/upload/:month", upload.single("file"), (req, res) => {
-  res.json({ file: req.file.filename });
+  res.json({
+    url: `/uploads/${req.params.month}/${req.file.filename}`,
+  });
 });
 
-// ดึงรายการรูป
+// ขอรายการไฟล์
 app.get("/files/:month", (req, res) => {
-  const month = req.params.month;
-  const dir = `uploads/${month}`;
+  const dir = `uploads/${req.params.month}`;
   if (!fs.existsSync(dir)) return res.json([]);
-  res.json(fs.readdirSync(dir));
+
+  const files = fs.readdirSync(dir).map(file =>
+    `/uploads/${req.params.month}/${file}`
+  );
+
+  res.json(files);
 });
 
 app.listen(PORT, () => {
-  console.log("Server running on http://localhost:" + PORT);
+  console.log("Server running on port " + PORT);
 });
