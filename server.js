@@ -13,8 +13,8 @@ app.use(express.json());
 // ================== Cloudinary ==================
 cloudinary.config({
   cloud_name: "dhzcni338",   // ใส่ของตัวเอง
-  api_key: "API_KEY",
-  api_secret: "API_SECRET",
+  api_key: "188179442839638",
+  api_secret: "jo7TFoLw7pqdskyeyQj7W0oe3HY",
 });
 
 
