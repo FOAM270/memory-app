@@ -8,7 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 
-// ================== ใส่ API ตรงนี้ ==================
+// ================== Cloudinary ==================
 cloudinary.config({
   cloud_name: "Root",
   api_key: "188179442839638",
@@ -16,21 +16,37 @@ cloudinary.config({
 });
 
 
-// ================= static =================
+// ================== static ==================
 app.use(express.static("public"));
 
 
-// ================= หน้าแรก =================
+// ================== data file ==================
+const DATA_FILE = "data.json";
+
+if (!fs.existsSync(DATA_FILE)) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify({}));
+}
+
+function readData() {
+  return JSON.parse(fs.readFileSync(DATA_FILE));
+}
+
+function writeData(data) {
+  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+}
+
+
+// ================== หน้าแรก ==================
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 
-// ================= multer (ไฟล์ชั่วคราว) =================
+// ================== multer ==================
 const upload = multer({ dest: "temp/" });
 
 
-// ================= upload =================
+// ================== upload ==================
 app.post("/upload/:month", upload.single("file"), async (req, res) => {
   try {
     const result = await cloudinary.uploader.upload(req.file.path, {
@@ -38,8 +54,13 @@ app.post("/upload/:month", upload.single("file"), async (req, res) => {
       resource_type: "auto",
     });
 
-    // ลบไฟล์ชั่วคราว
     fs.unlinkSync(req.file.path);
+
+    // ⭐ บันทึก URL ลง data.json
+    const data = readData();
+    if (!data[req.params.month]) data[req.params.month] = [];
+    data[req.params.month].push(result.secure_url);
+    writeData(data);
 
     res.json({ url: result.secure_url });
   } catch (err) {
@@ -48,15 +69,14 @@ app.post("/upload/:month", upload.single("file"), async (req, res) => {
 });
 
 
-// ================= list files =================
-// ⚠️ cloud ไม่ต้อง list จาก server แล้ว
-// ปล่อยให้หน้าเว็บจำ URL เอง
+// ================== list files ==================
 app.get("/files/:month", (req, res) => {
-  res.json([]);
+  const data = readData();
+  res.json(data[req.params.month] || []);
 });
 
 
-// ================= start server =================
+// ================== start ==================
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
 });
