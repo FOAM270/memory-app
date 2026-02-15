@@ -1,18 +1,23 @@
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
+const cloudinary = require("cloudinary").v2;
 const fs = require("fs");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 
-// ================= static =================
-// เปิดให้เรียกไฟล์ใน public
-app.use(express.static("public"));
+// ================== ใส่ API ตรงนี้ ==================
+cloudinary.config({
+  cloud_name: "Root",
+  api_key: "188179442839638",
+  api_secret: "jo7TFoLw7pqdskyeyQj7W0oe3HY",
+});
 
-// เปิดให้เข้าถึง uploads
-app.use("/uploads", express.static("uploads"));
+
+// ================= static =================
+app.use(express.static("public"));
 
 
 // ================= หน้าแรก =================
@@ -21,53 +26,33 @@ app.get("/", (req, res) => {
 });
 
 
-// ================= สร้างโฟลเดอร์ uploads =================
-if (!fs.existsSync("uploads")) {
-  fs.mkdirSync("uploads");
-}
-
-
-// ================= ตั้งค่าการเก็บไฟล์ =================
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const month = req.params.month;
-    const dir = path.join("uploads", month);
-
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-
-    cb(null, dir);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
-});
-
-const upload = multer({ storage });
+// ================= multer (ไฟล์ชั่วคราว) =================
+const upload = multer({ dest: "temp/" });
 
 
 // ================= upload =================
-app.post("/upload/:month", upload.single("file"), (req, res) => {
-  res.json({
-    url: `/uploads/${req.params.month}/${req.file.filename}`,
-  });
+app.post("/upload/:month", upload.single("file"), async (req, res) => {
+  try {
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: "memory/" + req.params.month,
+      resource_type: "auto",
+    });
+
+    // ลบไฟล์ชั่วคราว
+    fs.unlinkSync(req.file.path);
+
+    res.json({ url: result.secure_url });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 
 // ================= list files =================
+// ⚠️ cloud ไม่ต้อง list จาก server แล้ว
+// ปล่อยให้หน้าเว็บจำ URL เอง
 app.get("/files/:month", (req, res) => {
-  const dir = path.join("uploads", req.params.month);
-
-  if (!fs.existsSync(dir)) {
-    return res.json([]);
-  }
-
-  const files = fs
-    .readdirSync(dir)
-    .map((f) => `/uploads/${req.params.month}/${f}`);
-
-  res.json(files);
+  res.json([]);
 });
 
 
