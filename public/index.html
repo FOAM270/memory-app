@@ -232,17 +232,35 @@ let selected = new Set();
 
 
 // ================= เดือน =================
-function renderMonths(){
+async function renderMonths(){
     monthPage.innerHTML = "";
-    monthNames.forEach((name,i)=>{
+
+    for(let i=0;i<monthNames.length;i++){
         const btn = document.createElement("div");
         btn.className = "month";
         btn.onclick = ()=> openMonth(i);
-        btn.innerHTML = `<div class="no-cover">📁</div><span>${name}</span>`;
-        monthPage.appendChild(btn);
-    });
-}
 
+        // ⭐ ไปดึงหน้าปกจาก server
+        const res = await fetch("/cover/" + i);
+        const data = await res.json();
+
+        if(data.url){
+            btn.innerHTML = `
+                <div style="position:relative">
+                    <img src="${data.url}">
+                </div>
+                <span>${monthNames[i]}</span>
+            `;
+        }else{
+            btn.innerHTML = `
+                <div class="no-cover">📁</div>
+                <span>${monthNames[i]}</span>
+            `;
+        }
+
+        monthPage.appendChild(btn);
+    }
+}
 
 // ================= รหัสผ่าน =================
 window.checkPassword = function(){
@@ -350,13 +368,15 @@ coverUpload.addEventListener("change", async (e)=>{
 
     const data = await up.json();
 
-    await fetch("/cover/" + currentMonth, {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ url: data.url })
-    });
+await fetch("/cover/" + currentMonth, {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ url: data.url })
+});
 
-    alert("ตั้งหน้าปกแล้ว 💗");
+alert("ตั้งหน้าปกแล้ว 💗");
+await renderMonths();
+
 });
 }
 

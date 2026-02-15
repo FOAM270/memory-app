@@ -12,7 +12,7 @@ app.use(express.json());
 
 // ================== Cloudinary ==================
 cloudinary.config({
-  cloud_name: "dhzcni338",
+  cloud_name: "dhzcni338",   // ใส่ของตัวเอง
   api_key: "188179442839638",
   api_secret: "jo7TFoLw7pqdskyeyQj7W0oe3HY",
 });
@@ -66,8 +66,6 @@ app.post("/upload/:month", upload.single("file"), async (req, res) => {
 
     const data = readData();
     if (!data[req.params.month]) data[req.params.month] = [];
-
-    // เพิ่มไว้ด้านหน้า → รูปล่าสุดขึ้นก่อน
     data[req.params.month].unshift(result.secure_url);
 
     writeData(data);
@@ -81,29 +79,51 @@ app.post("/upload/:month", upload.single("file"), async (req, res) => {
 });
 
 
-// ================== list files ==================
+// ================== list ==================
 app.get("/files/:month", (req, res) => {
   const data = readData();
   res.json(data[req.params.month] || []);
 });
 
 
-// ================== delete ==================
-app.post("/delete", async (req, res) => {
+// ================== delete many ==================
+app.post("/delete", (req, res) => {
   try {
-    const { month, url } = req.body;
-    if (!month || !url) return res.status(400).json({ error: "missing data" });
+    const { month, urls } = req.body;
+    if (!month || !urls) return res.status(400).json({ error: "missing" });
 
     const data = readData();
     if (!data[month]) return res.json({});
 
-    data[month] = data[month].filter(u => u !== url);
+    data[month] = data[month].filter(u => !urls.includes(u));
     writeData(data);
 
     res.json({ success: true });
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+
+// ================== ตั้งหน้าปก ==================
+app.post("/cover/:month", (req, res) => {
+  const { url } = req.body;
+
+  const data = readData();
+  if (!data.covers) data.covers = {};
+
+  data.covers[req.params.month] = url;
+  writeData(data);
+
+  res.json({ success: true });
+});
+
+
+// ================== ดึงหน้าปก ==================
+app.get("/cover/:month", (req, res) => {
+  const data = readData();
+  res.json({ url: data.covers ? data.covers[req.params.month] : null });
 });
 
 
