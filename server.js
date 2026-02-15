@@ -7,6 +7,8 @@ const fs = require("fs");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use(express.json());
+
 
 // ================== Cloudinary ==================
 cloudinary.config({
@@ -28,7 +30,11 @@ if (!fs.existsSync(DATA_FILE)) {
 }
 
 function readData() {
-  return JSON.parse(fs.readFileSync(DATA_FILE));
+  try {
+    return JSON.parse(fs.readFileSync(DATA_FILE));
+  } catch {
+    return {};
+  }
 }
 
 function writeData(data) {
@@ -49,6 +55,8 @@ const upload = multer({ dest: "temp/" });
 // ================== upload ==================
 app.post("/upload/:month", upload.single("file"), async (req, res) => {
   try {
+    if (!req.file) return res.status(400).json({ error: "no file" });
+
     const result = await cloudinary.uploader.upload(req.file.path, {
       folder: "memory/" + req.params.month,
       resource_type: "auto",
@@ -56,14 +64,18 @@ app.post("/upload/:month", upload.single("file"), async (req, res) => {
 
     fs.unlinkSync(req.file.path);
 
-    // ⭐ บันทึก URL ลง data.json
     const data = readData();
     if (!data[req.params.month]) data[req.params.month] = [];
-    data[req.params.month].push(result.secure_url);
+
+    // เพิ่มไว้ด้านหน้า → รูปล่าสุดขึ้นก่อน
+    data[req.params.month].unshift(result.secure_url);
+
     writeData(data);
 
     res.json({ url: result.secure_url });
+
   } catch (err) {
+    console.log(err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -73,6 +85,25 @@ app.post("/upload/:month", upload.single("file"), async (req, res) => {
 app.get("/files/:month", (req, res) => {
   const data = readData();
   res.json(data[req.params.month] || []);
+});
+
+
+// ================== delete ==================
+app.post("/delete", async (req, res) => {
+  try {
+    const { month, url } = req.body;
+    if (!month || !url) return res.status(400).json({ error: "missing data" });
+
+    const data = readData();
+    if (!data[month]) return res.json({});
+
+    data[month] = data[month].filter(u => u !== url);
+    writeData(data);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 
