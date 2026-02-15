@@ -166,6 +166,27 @@ header{
     from{ transform:translateY(0); opacity:1; }
     to{ transform:translateY(-100vh); opacity:0; }
 }
+/* รูปลอยหน้า login */
+.floating-photo{
+    position: fixed;
+    width: 70px;
+    height: 70px;
+    object-fit: cover;
+    border-radius: 15px;
+    animation: floatPhoto linear infinite;
+    z-index: 0;
+    opacity: 0.9;
+}
+
+@keyframes floatPhoto{
+    from{
+        transform: translateY(110vh) rotate(0deg);
+    }
+    to{
+        transform: translateY(-120vh) rotate(360deg);
+    }
+}
+
 </style>
 </head>
 
@@ -441,6 +462,28 @@ window.closePopup = function(){
 
 });
 
+// ================= รูปลอยหน้า LOGIN =================
+const floatingImages = [
+    "https://res.cloudinary.com/dhzcni338/image/upload/v1771165137/memory/cover_9/jdfwnlalr0rvibraohrx.jpg"    
+    "https://res.cloudinary.com/dhzcni338/image/upload/v1771165031/memory/cover_0/akcwvfi0d3den2agotjq.jpg"
+];
+
+function createFloatingPhotos(){
+    floatingImages.forEach((src)=>{
+        const img = document.createElement("img");
+        img.src = src;
+        img.className = "floating-photo";
+
+        // สุ่มตำแหน่ง + เวลา
+        img.style.left = Math.random()*90 + "vw";
+        img.style.animationDuration = (Math.random()*10 + 10) + "s";
+        img.style.animationDelay = Math.random()*5 + "s";
+
+        document.body.appendChild(img);
+    });
+}
+
+createFloatingPhotos();
 
 // ================= หัวใจลอย =================
 setInterval(()=>{
